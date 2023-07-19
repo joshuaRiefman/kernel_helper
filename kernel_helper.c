@@ -55,7 +55,6 @@
 #define VERBOSE_DEFAULT 0
 #define USE_BLANK_LINES_DEFAULT 0
 
-
 size_t get_length(const char *string, size_t max_length);
 int is_blank_line(const char *string, size_t buffer_size);
 void print_help();
@@ -65,54 +64,46 @@ int main(int argc, char *argv[]) {
     FILE *kernel_in;
     FILE *kernel_out;
 
-    // Flags to keep track of whether we've completed the acquisition of these files
-    int acquired_input_file_flag = FALSE;
-    int acquired_output_file_flag = FALSE;
+    // File addresses
+    char *kernel_in_address = NULL;
+    char *kernel_out_address = NULL;
 
     // Set option defaults
     int verbose = VERBOSE_DEFAULT;
     int use_blank_lines = USE_BLANK_LINES_DEFAULT;
 
     /* Loop through command-line arguments, matching them to options and setting the corresponding argument */
-    if (argc != 0) {
-        for (int i = 0; i < argc; i++) {
-            if (strcmp(argv[i], "-h") == STRINGS_ARE_EQUAL || strcmp(argv[i], "--help") == STRINGS_ARE_EQUAL) {
-                print_help();
-                exit(0); // No need to continue program execution when help message is printed
-            }
-            if (strcmp(argv[i], "-b") == STRINGS_ARE_EQUAL) {
-                use_blank_lines = TRUE;
-            }
-            if (strcmp(argv[i], "-v") == STRINGS_ARE_EQUAL) {
-                verbose = TRUE;
-            }
-            if (strcmp(argv[i], "-f") == STRINGS_ARE_EQUAL) {
-                kernel_in = fopen(argv[i + 1], "r");
-                acquired_input_file_flag = TRUE;
-                i++; //We've already processed the next argument, so increment again
-            }
-            if (strcmp(argv[i], "-o") == STRINGS_ARE_EQUAL) {
-                kernel_out = fopen(argv[i + 1], "w");
-                acquired_output_file_flag = TRUE;
-                i++;
-            }
+    for (int i = 0; i < argc; i++) {
+        if (strcmp(argv[i], "-h") == STRINGS_ARE_EQUAL || strcmp(argv[i], "--help") == STRINGS_ARE_EQUAL) {
+            print_help();
+            exit(0); // No need to continue program execution when help message is printed
+        }
+        if (strcmp(argv[i], "-b") == STRINGS_ARE_EQUAL) {
+            use_blank_lines = TRUE;
+        }
+        if (strcmp(argv[i], "-v") == STRINGS_ARE_EQUAL) {
+            verbose = TRUE;
+        }
+        if (strcmp(argv[i], "-f") == STRINGS_ARE_EQUAL) {
+            kernel_in_address = argv[i + 1];
+            i++; //We've already processed the next argument, so increment again
+        }
+        if (strcmp(argv[i], "-o") == STRINGS_ARE_EQUAL) {
+            kernel_out_address = argv[i + 1];
+            i++;
         }
     }
 
-    // If files weren't identified from command-line arguments, use the defaults
-    if (!acquired_input_file_flag) {
-        kernel_in = fopen(DEFAULT_KERNEL_FILE, "r");
-    }
-    if (!acquired_output_file_flag) {
-        kernel_out = fopen(DEFAULT_OUTPUT_FILE, "w");
-    }
-
-    // If files are somehow still NULL, exit and inform user
+    // Open files
+    kernel_in = fopen(kernel_in_address != NULL ? kernel_in_address : DEFAULT_KERNEL_FILE, "r");
     if (kernel_in == NULL) {
         printf("Fatal Error: Kernel was not found!\n");
         return 1;
     }
+
+    kernel_out = fopen(kernel_out_address != NULL ? kernel_out_address : DEFAULT_OUTPUT_FILE, "w");
     if (kernel_out == NULL) {
+        fclose(kernel_in);
         printf("Fatal Error: Output file was not found or created!\n");
         return 1;
     }
@@ -131,7 +122,7 @@ int main(int argc, char *argv[]) {
         // Identify string length
         buffer_size = get_length(in_string_buffer, MAX_BUFFER_SIZE);
         // Allocate a buffer for the output string that is larger than input by prefix + suffix characters
-        char *out_string_buffer = malloc(sizeof(char) * buffer_size + strlen(string_prefix) + strlen(string_suffix));
+        char *out_string_buffer = malloc(sizeof(char) * (buffer_size + strlen(string_prefix) + strlen(string_suffix)));
 
         // If the line is blank, then output the blank_line string if that mode is enabled, and continue
         if (is_blank_line(in_string_buffer, buffer_size) == TRUE) {
@@ -146,7 +137,6 @@ int main(int argc, char *argv[]) {
 
         // Output string is first constructed by adding the initial `"` character.
         out_string_buffer[0] = string_prefix[0];
-
         // Next, append the string from the input buffer into the output buffer
         for (int i = 0; i < buffer_size; i++) {
             out_string_buffer[i + 1] = in_string_buffer[i];
@@ -166,7 +156,7 @@ int main(int argc, char *argv[]) {
         free(out_string_buffer);
     }
 
-    // Close input and output files, and free the input buffer
+    // Clean up
     fclose(kernel_in);
     fclose(kernel_out);
     free(in_string_buffer);
@@ -189,7 +179,7 @@ size_t get_length(const char *string, size_t max_length) {
         }
     }
 
-    printf("Maximum string length was exceeded!");
+    printf("Fatal Error: Maximum string length was exceeded!");
     exit(1);
 }
 
@@ -206,6 +196,7 @@ int is_blank_line(const char *string, size_t buffer_size) {
             return FALSE;
         }
     }
+
     return TRUE;
 }
 
