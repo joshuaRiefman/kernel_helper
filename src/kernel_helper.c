@@ -1,5 +1,4 @@
-//
-// Created by Joshua Riefman on 2023-07-18.
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // File:        kernel_helper.c
 //
@@ -33,9 +32,7 @@
 //              Once again, the text is reformatted such that it can
 //              be pasted into a C++ program to be built into an OpenCL kernel.
 //
-// TODO:        1. Fix undefined behaviour when end of file line is missing.
-//              2. Add ability to search for a *.cl file if none is provided as an argument
-//                 instead of using the default.
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -46,24 +43,30 @@
 #define TRUE 1
 #define FALSE 0
 #define STRINGS_ARE_EQUAL 0
-
-// Execution parameters
-#define MAX_BUFFER_SIZE 128
-
+//
 // IO
-#define DEFAULT_KERNEL_FILE "test_kernel.cl"
+#define DEFAULT_KERNEL_FILE "kernel.cl"
 #define DEFAULT_OUTPUT_FILE "out.txt"
 #define IO_DIRECTORY "../data/"
+#define MAX_BUFFER_SIZE 128
 
 // Default parameter values
-#define VERBOSE_DEFAULT 0
-#define USE_BLANK_LINES_DEFAULT 0
-#define IMMEDIATE_DIRECTORY_DEFAULT 0
+#define VERBOSE_DEFAULT FALSE
+#define USE_BLANK_LINES_DEFAULT FALSE
+#define IMMEDIATE_DIRECTORY_DEFAULT FALSE
 
 size_t get_length(const char *string, size_t max_length);
 int is_blank_line(const char *string, size_t buffer_size);
 void print_help();
 char *getPath(char *file_name, int immediate_directory);
+void process_kernel(FILE *kernel_in, FILE* kernel_out);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Set global option defaults
+int verbose = VERBOSE_DEFAULT;
+int use_blank_lines = USE_BLANK_LINES_DEFAULT;
+int get_from_immediate_directory = IMMEDIATE_DIRECTORY_DEFAULT;
 
 int main(int argc, char *argv[]) {
     // Input and Output Files
@@ -71,13 +74,8 @@ int main(int argc, char *argv[]) {
     FILE *kernel_out;
 
     // File addresses
-    char *kernel_in_address = NULL;
-    char *kernel_out_address = NULL;
-
-    // Set option defaults
-    int verbose = VERBOSE_DEFAULT;
-    int use_blank_lines = USE_BLANK_LINES_DEFAULT;
-    int get_from_immediate_directory = IMMEDIATE_DIRECTORY_DEFAULT;
+    char *kernel_filename = NULL;
+    char *output_filename = NULL;
 
     /* Loop through command-line arguments, matching them to options and setting the corresponding argument */
     for (int i = 0; i < argc; i++) {
@@ -95,29 +93,124 @@ int main(int argc, char *argv[]) {
             get_from_immediate_directory = TRUE;
         }
         if (strcmp(argv[i], "-f") == STRINGS_ARE_EQUAL) {
-            kernel_in_address = argv[i + 1];
+            kernel_filename = argv[i + 1];
             i++; //We've already processed the next argument, so increment again
         }
         if (strcmp(argv[i], "-o") == STRINGS_ARE_EQUAL) {
-            kernel_out_address = argv[i + 1];
+            output_filename = argv[i + 1];
             i++;
         }
     }
 
     // Open files
-    kernel_in = fopen(getPath(kernel_in_address != NULL ? kernel_in_address : DEFAULT_KERNEL_FILE, get_from_immediate_directory), "r");
+    char *in_address = getPath(kernel_filename != NULL ? kernel_filename : DEFAULT_KERNEL_FILE, get_from_immediate_directory);
+    kernel_in = fopen(in_address, "r");
     if (kernel_in == NULL) {
         printf("Fatal Error: Kernel was not found!\n");
         return 1;
     }
 
-    kernel_out = fopen(getPath(kernel_out_address != NULL ? kernel_out_address : DEFAULT_OUTPUT_FILE, get_from_immediate_directory), "w");
+    char *out_address = getPath(output_filename != NULL ? output_filename : DEFAULT_OUTPUT_FILE, get_from_immediate_directory);
+    kernel_out = fopen(out_address, "w");
     if (kernel_out == NULL) {
         fclose(kernel_in); // kernel_in will be open if we get to here, so just make sure to close it
         printf("Fatal Error: Output file was not found or created!\n");
         return 1;
     }
 
+    // Now, process the kernel with the files we just opened
+    process_kernel(kernel_in, kernel_out);
+
+    // Clean up
+    fclose(kernel_in);
+    fclose(kernel_out);
+}
+
+/*
+ * Return the length of a string buffer by sequentially checking if a character is the newline character which
+ * indicates the end of the line, and returning the index of the newline character.
+ * Known Issue: Undefined behaviour when newline character is absent.
+ * Params:
+ *      string: string in which the length will be evaluated.
+ *      max_length: maximum buffer size
+ * Returns:
+ *      a size_t that indicates the length of the string
+ * Errors:
+ *      exits if the indicated length is greater than max_length
+ */
+size_t get_length(const char *string, size_t max_length) {
+    for (int i = 0; i < max_length; i++) {
+        if (string[i] == '\n' || string[i] == EOF) {
+            return i;
+        }
+    }
+
+    printf("Fatal Error: Maximum string length was exceeded!");
+    exit(1);
+}
+
+/*
+ * Check for blank lines by returning FALSE when a non-whitespace character is encountered, and TRUE
+ * if no non-whitespace character is encountered.
+ * Params:
+ *      string: string that will be evaluated to be blank or not.
+ *      buffer_size: size of `string`
+ * Returns:
+ *      TRUE if line is blank (all whitespace), and FALSE otherwise
+ */
+int is_blank_line(const char *string, size_t buffer_size) {
+    for (int i = 0; i < buffer_size; i++) {
+        if (!isspace(string[i])) {
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
+/*
+ * Print a help message detailing usage, options, and flags.
+ */
+void print_help() {
+    char help[] = {
+        "usage: kernel_helper [options]\n"
+        "  example: kernel_helper -f kernel.cl -o out.txt -v\n"
+        "  options:\n"
+        "    -h, --help         Display help\n"
+        "    -v                 Activate verbose mode\n"
+        "    -b                 Enable output of blank lines\n"
+        "    -f [kernel_file]   Indicate kernel file for the program to process\n"
+        "    -o [output_file]   Indicate an output file for the program\n"
+        "    -a                 Search the executable's immediate directory (instead of looking for data/)\n"
+    };
+
+    printf("%s", help);
+}
+
+/*
+ * Get a path to the IO directory (or not, if immediate_directory search mode is enabled)
+ * Params:
+ *      file_name: name of the file that the path to is being generated
+ *      immediate_directory: non-zero if immediate_directory search should be enabled
+ * Returns:
+ *      a pointer to a file path
+ */
+char *getPath(char *file_name, int immediate_directory) {
+    // If we don't need to get the path to the IO directory we can just return the file_name
+    if (immediate_directory == TRUE) {
+        return file_name;
+    }
+
+    // Create the buffer and fill it with "../data/file_name"
+    char *file_address = malloc(sizeof(char) * (strlen(file_name) + strlen(IO_DIRECTORY)));
+
+    strcpy(file_address, IO_DIRECTORY);
+    strcat(file_address, file_name);
+
+    return file_address;
+}
+
+void process_kernel(FILE *kernel_in, FILE* kernel_out) {
     // Define strings that will be used
     const char string_prefix[] = { '"' };
     const char string_suffix[] = {' ', '\\', 'n', '"', '\n', '\0' };
@@ -169,79 +262,5 @@ int main(int argc, char *argv[]) {
         fputs(out_string_buffer, kernel_out);
         free(out_string_buffer);
     }
-
-    // Clean up
-    fclose(kernel_in);
-    fclose(kernel_out);
     free(in_string_buffer);
-}
-
-/*
- * Return the length of a string buffer by sequentially checking if a character is the newline character which
- * indicates the end of the line, and returning the index of the newline character.
- * Known Issue: Undefined behaviour when newline character is absent.
- * Params:
- *      string: string in which the length will be evaluated.
- *      max_length: maximum buffer size
- * Returns: a size_t that indicates the length of the string
- * Errors: exits if the indicated length is greater than max_length
- */
-size_t get_length(const char *string, size_t max_length) {
-    for (int i = 0; i < max_length; i++) {
-        if (string[i] == '\n' || string[i] == EOF) {
-            return i;
-        }
-    }
-
-    printf("Fatal Error: Maximum string length was exceeded!");
-    exit(1);
-}
-
-/*
- * Check for blank lines by returning FALSE when a non-whitespace character is encountered, and TRUE
- * if no non-whitespace character is encountered.
- * Params:
- *      string: string that will be evaluated to be blank or not.
- *      buffer_size: size of `string`
- */
-int is_blank_line(const char *string, size_t buffer_size) {
-    for (int i = 0; i < buffer_size; i++) {
-        if (!isspace(string[i])) {
-            return FALSE;
-        }
-    }
-
-    return TRUE;
-}
-
-/*
- * Print a help message detailing usage, options, and flags.
- */
-void print_help() {
-    char help[] = {
-        "usage: kernel_helper [options]\n"
-        "  example: kernel_helper -f kernel.cl -o out.txt -v\n"
-        "  options:\n"
-        "    -h, --help         Display help\n"
-        "    -v                 Activate verbose mode\n"
-        "    -b                 Enable output of blank lines\n"
-        "    -f [kernel_file]   Indicate kernel file for the program to process\n"
-        "    -o [output_file]   Indicate an output file for the program\n"
-        "    -a                 Enable immediate directory search (instead of looking for data/)\n"
-    };
-
-    printf("%s", help);
-}
-
-char *getPath(char *file_name, int immediate_directory) {
-    if (immediate_directory) {
-        return file_name;
-    }
-
-    char *file_address = malloc(sizeof(char) * (strlen(file_name) + strlen(IO_DIRECTORY)));
-
-    strcpy(file_address, IO_DIRECTORY);
-    strcat(file_address, file_name);
-
-    return file_address;
 }
