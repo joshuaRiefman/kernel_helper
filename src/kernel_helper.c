@@ -47,17 +47,23 @@
 #define FALSE 0
 #define STRINGS_ARE_EQUAL 0
 
+// Execution parameters
+#define MAX_BUFFER_SIZE 128
+
+// IO
 #define DEFAULT_KERNEL_FILE "test_kernel.cl"
 #define DEFAULT_OUTPUT_FILE "out.txt"
-#define MAX_BUFFER_SIZE 128
+#define IO_DIRECTORY "../data/"
 
 // Default parameter values
 #define VERBOSE_DEFAULT 0
 #define USE_BLANK_LINES_DEFAULT 0
+#define IMMEDIATE_DIRECTORY_DEFAULT 0
 
 size_t get_length(const char *string, size_t max_length);
 int is_blank_line(const char *string, size_t buffer_size);
 void print_help();
+char *getPath(char *file_name, int immediate_directory);
 
 int main(int argc, char *argv[]) {
     // Input and Output Files
@@ -71,6 +77,7 @@ int main(int argc, char *argv[]) {
     // Set option defaults
     int verbose = VERBOSE_DEFAULT;
     int use_blank_lines = USE_BLANK_LINES_DEFAULT;
+    int get_from_immediate_directory = IMMEDIATE_DIRECTORY_DEFAULT;
 
     /* Loop through command-line arguments, matching them to options and setting the corresponding argument */
     for (int i = 0; i < argc; i++) {
@@ -84,6 +91,9 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[i], "-v") == STRINGS_ARE_EQUAL) {
             verbose = TRUE;
         }
+        if (strcmp(argv[i], "-a") == STRINGS_ARE_EQUAL) {
+            get_from_immediate_directory = TRUE;
+        }
         if (strcmp(argv[i], "-f") == STRINGS_ARE_EQUAL) {
             kernel_in_address = argv[i + 1];
             i++; //We've already processed the next argument, so increment again
@@ -95,15 +105,15 @@ int main(int argc, char *argv[]) {
     }
 
     // Open files
-    kernel_in = fopen(kernel_in_address != NULL ? kernel_in_address : DEFAULT_KERNEL_FILE, "r");
+    kernel_in = fopen(getPath(kernel_in_address != NULL ? kernel_in_address : DEFAULT_KERNEL_FILE, get_from_immediate_directory), "r");
     if (kernel_in == NULL) {
         printf("Fatal Error: Kernel was not found!\n");
         return 1;
     }
 
-    kernel_out = fopen(kernel_out_address != NULL ? kernel_out_address : DEFAULT_OUTPUT_FILE, "w");
+    kernel_out = fopen(getPath(kernel_out_address != NULL ? kernel_out_address : DEFAULT_OUTPUT_FILE, get_from_immediate_directory), "w");
     if (kernel_out == NULL) {
-        fclose(kernel_in);
+        fclose(kernel_in); // kernel_in will be open if we get to here, so just make sure to close it
         printf("Fatal Error: Output file was not found or created!\n");
         return 1;
     }
@@ -121,7 +131,9 @@ int main(int argc, char *argv[]) {
     while (fgets(in_string_buffer, MAX_BUFFER_SIZE, kernel_in)) {
         // Identify string length
         buffer_size = get_length(in_string_buffer, MAX_BUFFER_SIZE);
-        // Allocate a buffer for the output string that is larger than input by prefix + suffix characters
+        // Allocate a buffer for the output string of size prefix + input + suffix characters
+        // The buffer is created and destroyed every iteration of the loop instead of being created once and
+        // using realloc() because using realloc() was experimentally more prone to memory issues
         char *out_string_buffer = malloc(sizeof(char) * (buffer_size + strlen(string_prefix) + strlen(string_suffix)));
 
         // If the line is blank, then output the blank_line string if that mode is enabled, and continue
@@ -135,6 +147,8 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        // We construct the string manually instead of using strcpy() and strcat() as those
+        // built-in methods result in more common issues with memory and garbage values
         // Output string is first constructed by adding the initial `"` character.
         out_string_buffer[0] = string_prefix[0];
         // Next, append the string from the input buffer into the output buffer
@@ -213,7 +227,21 @@ void print_help() {
         "    -b                 Enable output of blank lines\n"
         "    -f [kernel_file]   Indicate kernel file for the program to process\n"
         "    -o [output_file]   Indicate an output file for the program\n"
+        "    -a                 Enable immediate directory search (instead of looking for data/)\n"
     };
 
     printf("%s", help);
+}
+
+char *getPath(char *file_name, int immediate_directory) {
+    if (immediate_directory) {
+        return file_name;
+    }
+
+    char *file_address = malloc(sizeof(char) * (strlen(file_name) + strlen(IO_DIRECTORY)));
+
+    strcpy(file_address, IO_DIRECTORY);
+    strcat(file_address, file_name);
+
+    return file_address;
 }
