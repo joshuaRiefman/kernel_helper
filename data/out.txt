@@ -2,5 +2,4 @@
 "   __global float* output_buffer) \n"
 "{ \n"
 "   int i = get_global_id(0); \n"
-"   output_buffer[i] = i \n"
 "} \n"
