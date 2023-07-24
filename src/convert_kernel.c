@@ -96,6 +96,8 @@ int main(int argc, char *argv[]) {
     fclose(kernel_out);
 }
 
+//////////////////////////////////////////  PRIVATE FUNCTIONS  ////////////////////////////////////////////////
+
 /*
  * Print a help message detailing usage, options, and flags.
  */

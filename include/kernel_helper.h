@@ -71,7 +71,7 @@ static const char blank_line[] = { '"', ' ', '\\', 'n', '"', '\n', '\0' };
 // Functions
 size_t get_length(const char *string, size_t max_length);
 int is_blank_line(const char *string, size_t buffer_size);
-char* process_line(const char* in_string_buffer, size_t buffer_size);
+char* process_line(const char* in_string_buffer, size_t in_string_size);
 
 // Interfaces
 void process_kernel(FILE *kernel, FILE* kernel_out);

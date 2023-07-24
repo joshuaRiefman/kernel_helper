@@ -60,6 +60,12 @@ char* load_kernel(FILE *kernel, size_t kernel_size) {
     return kernelSource;
 }
 
+/*
+ * Process an OpenCL kernel from a *.cl file into a format that can be pasted into a C++ program.
+ * Params:
+ *      kernel: Opened and readable file that will be parsed and reformatted
+ *      kernel_out: Opened and writable file where the output will be written
+ */
 void process_kernel(FILE *kernel, FILE* kernel_out) {
     // Create input buffer
     char *in_string_buffer = malloc(sizeof(char) * MAX_BUFFER_SIZE);
@@ -99,22 +105,29 @@ void process_kernel(FILE *kernel, FILE* kernel_out) {
 
 //////////////////////////////////////////  PRIVATE FUNCTIONS  ////////////////////////////////////////////////
 
-
-char* process_line(const char* in_string_buffer, size_t buffer_size) {
+/*
+ * Process one line to the propre format by wrapping it in the necessary prefix and suffixes.
+ * Params:
+ *      in_string_buffer: pointer to the buffer containing the string that will be processed
+ *      buffer_size: length of the string that will be processed
+ * Returns:
+ *      pointer to the buffer of the reformatted output string
+ */
+char* process_line(const char* in_string_buffer, size_t in_string_size) {
     // Allocate a buffer for the output string of size prefix + input + suffix characters
     // The buffer is created and destroyed every iteration of the loop instead of being created once and
     // using realloc() because using realloc() was experimentally more prone to memory issues
-    char *out_string_buffer = malloc(sizeof(char) * (buffer_size + strlen(string_prefix) + strlen(string_suffix)));
+    char *out_string_buffer = malloc(sizeof(char) * (in_string_size + strlen(string_prefix) + strlen(string_suffix)));
 
     // Output string is first constructed by adding the initial `"` character.
     out_string_buffer[0] = string_prefix[0];
     // Next, append the string from the input buffer into the output buffer
-    for (int i = 0; i < buffer_size; i++) {
+    for (int i = 0; i < in_string_size; i++) {
         out_string_buffer[i + 1] = in_string_buffer[i];
     }
     // Finally, append the suffix characters to the output buffer
     for (int i = 1; i <= strlen(string_suffix); i++) {
-        out_string_buffer[buffer_size + i] = string_suffix[i - 1];
+        out_string_buffer[in_string_size + i] = string_suffix[i - 1];
     }
 
     return out_string_buffer;
