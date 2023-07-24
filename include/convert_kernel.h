@@ -1,20 +1,19 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                           //
-// File:        kernel_helper.c                                                                              //
+// File:        convert_kernel.h                                                                             //
 //                                                                                                           //
-// Abstract:    This is a library with two public interfaces to convert OpenCL kernel                        //
-//              files (*.cl) to either a paste-able format into the source code of                           //
-//              a C++ program, or loaded directly into a C++ program at runtime.                             //
+// Abstract:    This is a helper program to convert a *.cl kernel file                                       //
+//              into a format that is able to be pasted into a char[]                                        //
+//              within a C++ program to be then built as a OpenCL kernel.                                    //
 //                                                                                                           //
 // Version:     <1.0>                                                                                        //
 //                                                                                                           //
-// Usage:       Use the PUBLIC INTERFACES to either format a kernel in advance, or at runtime.               //
+// Usage:       Build the kernel_helper EXECUTABLE to preprocess OpenCL kernels.                             //
 //                                                                                                           //
-// Interfaces:  load_kernel(FILE *kernel, size_t kernel_size) - load kernel as string at runtime             //
-//              process_kernel(FILE *kernel, FILE* kernel_out) - format kernel to paste-able format          //
-//                                                                                                           //
-// Note:        Expects a blank line at the end of file, else UNDEFINED BEHAVIOUR WILL OCCUR.                //
+// Note:        Kernel *.cl file must be in the same directory/folder as the program executable.             //
+//              Expects a blank line at the end of file, else UNDEFINED BEHAVIOUR WILL OCCUR.                //
 //              The above is a known issue, which should be fixed in a future version.                       //
+//              Use -h or --help to print help message for usage instructions.                               //
 //                                                                                                           //
 // Example:     __kernel void example(                                                                       //
 //                  __global float* output_buffer)                                                           //
@@ -34,47 +33,10 @@
 //                                                                                                           //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef KERNEL_HELPER_KERNEL_HELPER_H
-#define KERNEL_HELPER_KERNEL_HELPER_H
+#ifndef KERNEL_HELPER_CONVERT_KERNEL_H
+#define KERNEL_HELPER_CONVERT_KERNEL_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
+static void print_help();
+static char *get_file_path(char *file_name, int immediate_directory);
 
-// Defines for readability
-#define TRUE 1
-#define FALSE 0
-#define STRINGS_ARE_EQUAL 0
-
-// IO
-#define DEFAULT_KERNEL_FILE "kernel.cl"
-#define DEFAULT_OUTPUT_FILE "example.txt"
-#define IO_DIRECTORY "data/"
-#define MAX_BUFFER_SIZE 128
-
-// Default parameter values
-#define VERBOSE_DEFAULT FALSE
-#define USE_BLANK_LINES_DEFAULT FALSE
-#define IMMEDIATE_DIRECTORY_DEFAULT FALSE
-
-// Set global option defaults
-static int verbose = VERBOSE_DEFAULT;
-static int use_blank_lines = USE_BLANK_LINES_DEFAULT;
-static int use_immediate_directory = IMMEDIATE_DIRECTORY_DEFAULT;
-
-// Define global strings that will be used
-static const char string_prefix[] = { '"' };
-static const char string_suffix[] = {' ', '\\', 'n', '"', '\n', '\0' };
-static const char blank_line[] = { '"', ' ', '\\', 'n', '"', '\n', '\0' };
-
-// Functions
-size_t get_length(const char *string, size_t max_length);
-int is_blank_line(const char *string, size_t buffer_size);
-char* process_line(const char* in_string_buffer, size_t buffer_size);
-
-// Interfaces
-void process_kernel(FILE *kernel, FILE* kernel_out);
-char* load_kernel(FILE *kernel, size_t kernel_size);
-
-#endif //KERNEL_HELPER_KERNEL_HELPER_H
+#endif //KERNEL_HELPER_CONVERT_KERNEL_H
