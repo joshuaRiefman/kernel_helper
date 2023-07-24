@@ -15,7 +15,7 @@ Kernel Helper has two public interfaces that can be used to convert OpenCL kerne
 | `kernel_size`: `size_t` | Size of the kernel file in bytes.                  |
 
 `load_kernel` returns a `char*` to the generated string. It can be cast to `const`
-and directly used as the kernel argument to `clBuildProgram()`.
+and directly used as the source argument to `clCreateProgramWithSource()`.
 
 ### `process_kernel`
 | Argument : Type      | Description                                                  |
@@ -24,5 +24,5 @@ and directly used as the kernel argument to `clBuildProgram()`.
 | `kernel_out`: `FILE` | Opened and writable `FILE` where the output will be written. |
 
 `process_kernel` takes in an input and output file and formats the input per the specifications
-required to paste the output into a C++ program such that it can be built as a kernel
-when provided to `clBuildProgram()`.
+required to paste the output into a C++ program such that it can paste as a field to a `const char*`
+then provided to `clCreateProgramWithSource()`.
