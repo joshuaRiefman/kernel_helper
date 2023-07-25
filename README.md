@@ -40,7 +40,7 @@ git submodule add https://github.com/joshuaRiefman/kernel_helper.git
 No matter whether you intend on using _Kernel Helper_ as an executable or at runtime, it's vital to build the project.
 
 ## Build
-To build and use _Kernel Helper_, it is recommended to create a `build` folder and use CMake to build the executable. Here's an example of the commands you'd use on MacOS.
+To build and use _Kernel Helper_, it is recommended to create a `build` folder and use CMake to build the executable. Here's an example of the commands you'd use on macOS.
 
 To create a build folder,
 ```bash
@@ -60,13 +60,13 @@ Currently, _Kernel Helper_ assumes that you'll be executing from the top-level d
 cd ..
 ```
 
-_Kernel Helper_ searches the `data/` directory for `.cl` kernels and it is also the location that output files get placed.
+_Kernel Helper_ searches the `data/` directory for `.cl` kernels, and it is also the location that output files get placed.
 To convert `kernel.cl` using _Kernel Helper_ to `out.txt`,
 
 ```bash
 ./build/bin/convert_kernel -f kernel.cl -o out.txt
 ```
-`./build/bin/convert_kernel` is the command to run the executable on MacOS (may be different for your platform).
+`./build/bin/convert_kernel` is the command to run the executable on macOS (could be different for your platform).
 The `-f` flag will tell _Kernel Helper_ what file to parse, and the `-o` flag where to put the result (it will create the file if it doesn't exist).
 Use the `-v` flag to enable verbose mode which will output the result to the console, as well. Use the `-b` flag to enable the inclusion of blank lines (which would otherwise be skipped). Use the `-a` flag to tell the executable to search the directory it is in, instead of trying to find the `data/` directory; this is useful if you move the executable from the `build/bin` folder it generates in.
 
